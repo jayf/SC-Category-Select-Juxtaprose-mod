@@ -1,6 +1,22 @@
-SC Category Select 1.1.3
+SC Category Select 1.1.3 -- Juxtaprose Mod 0.1
 ================
 
+Modifcations: Jay Fienberg of [Juxtaprose][7] ([Email][8])
+
+THIS IS NOT READY FOR PRODUCTION!
+
+I am in the process of adding Multiselect and other features to this add-on (see below for authorship and full details). The Multiselect and other features are options, so that the original, single-select dropdown is still an option (is the default option, in fact).
+
+Modifcation Version
+------------
+###0.1
+
+* Added Multiselect dropdown display (works for individual fields and in FF Matrix -- cat_id values are saved both in the field and reflected in the actual category-entry mapping table)
+
+* Started work on supporting Checkboxes and Radio button format for category selection
+
+
+------------
 Author: [Andrew Gunstone][1] ([Email][2]) - [Thirst Studios][3]
 
 SC Category Select is a [Pixel&Tonic's FieldFrame][4] FieldType which displays selected category options in a drop-down list. It only allows selection of a single category. You can select multiple category groups. The FieldType respects sub-categories.
@@ -108,6 +124,9 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 [4]: http://pixelandtonic.com/fieldframe "Pixel&Tonic FieldFrame"
 [5]: http://expressionengine.com/?affiliate=newism "ExpressionEngine"
 [6]: http://sassafrasconsulting.com.au/software/category-select/ "SC Category Select"
+[7]: http://juxtaprose.com/ "Juxtaprose website"
+[8]: mailto:siteinfo@icite.net "An email address for Jay"
+
 <!-- 
     This document is marked up using the Markdown syntax: http://daringfireball.net/projects/markdown/
     If you are reading this notice you may need to run the raw content through the Dingus online Markdown parser: http://daringfireball.net/projects/markdown/dingus

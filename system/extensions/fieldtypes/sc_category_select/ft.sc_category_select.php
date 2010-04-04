@@ -1,4 +1,6 @@
 <?php
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
  
 if ( ! defined('EXT')) exit('Invalid file request');
 
@@ -14,8 +16,8 @@ class Sc_category_select extends Fieldframe_Fieldtype {
  	
 	var $info = array(
 		'name'             => 'SC Category Select',
-		'version'          => '1.1.3',
-		'desc'             => 'Creates a select menu from a selected EE category',
+		'version'          => '1.1.3-juxtaprose-mod-0.1',
+		'desc'             => 'Creates a select menu from a selected EE category (Juxtaprose mod: allows multiselect)',
 		'docs_url'         => 'http://sassafrasconsulting.com.au/software/category-select',
 		'versions_xml_url' => 'http://sassafrasconsulting.com.au/versions.xml'
 	);
@@ -64,14 +66,38 @@ class Sc_category_select extends Fieldframe_Fieldtype {
 	function display_field($field_name, $field_data, $field_settings)
 	{
 	 	global $DSP, $DB;
-
-		$r = $DSP->input_select_header($field_name);
-		$r .= $DSP->input_select_option('', '--');
 			
 		$group_id = (!isset($field_settings['options'])) ? 0 : $field_settings['options'];
-		$r .= $this->_input_select_options(0,0,$group_id,$field_data);
+		
+		$mode = (!isset($field_settings['mode'])) ? 0 : $field_settings['mode'][0];		
 
-		$r .= $DSP->input_select_footer();
+		switch ($mode) {
+			case 1: /* Dropdown - multiselect */
+				$opts = $this->_input_select_options(0,0,$group_id,$field_data);
+				
+				$size = $opts[0]+1;	
+				//make this setable in the future
+				if ($size > 6) {
+					$size = 6;
+				}
+				
+				$r = $DSP->input_select_header($field_name.'[]',1,$size);
+				$r .= $DSP->input_select_option('', '--');
+	
+				$r .= $opts[1];
+				
+				$r .= $DSP->input_select_footer();
+				break;
+			case 0: /* Dropdown - single select */
+			default:
+				$r = $DSP->input_select_header($field_name);
+				$r .= $DSP->input_select_option('', '--');
+				
+				$opts = $this->_input_select_options(0,0,$group_id,$field_data);
+				$r .= $opts[1];
+		
+				$r .= $DSP->input_select_footer();
+		} 
 		return $r;
 	}
 
@@ -101,8 +127,14 @@ class Sc_category_select extends Fieldframe_Fieldtype {
 		
 		$options = (!isset($field_settings['options'])) ? 0 : $field_settings['options'];
 
+		$mode = (!isset($field_settings['mode'])) ? 0 : $field_settings['mode'];	
+
 		$cell = $DSP->qdiv('defaultBold', $LANG->line('select_category_group'))
-		       . $this->_select_category($options);
+		    . $this->_select_category($options)
+			. $DSP->qdiv('defaultBold', $LANG->line('display_mode'))
+		    . $this->_select_mode($mode);
+
+		$cell = $DSP->qdiv('rel_block', $cell);
 
 		return array('cell1' => '', 'cell2' => $cell);
 	}
@@ -119,13 +151,18 @@ class Sc_category_select extends Fieldframe_Fieldtype {
 
 		$options = (!isset($cell_settings['options'])) ? 0 : $cell_settings['options'];
 		
+		$mode = (!isset($field_settings['mode'])) ? 0 : $field_settings['mode'];			
+		
 		$r = '<label class="itemWrapper">'
 		   . $DSP->qdiv('defaultBold', $LANG->line('select_category_group'))
-		   . $this->_select_category($options)
+		    . $this->_select_category($options)
+			. $DSP->qdiv('defaultBold', $LANG->line('display_mode'))
+		    . $this->_select_mode($mode)
    		   . '</label>';
 
 		return $r;
 	}
+	
 	/**
 	 * Save Field
 	 *
@@ -136,8 +173,17 @@ class Sc_category_select extends Fieldframe_Fieldtype {
 	 */
 	function save_field($field_data, $field_settings)
 	{
+		
 		$this->cache['cat_del'] = 'true';
-		$this->cache['cat_id'] .= ",".$field_data;
+		if (is_array($field_data)) {
+			foreach ($field_data AS $id):
+				$i .=   $id . ",";
+			endforeach;
+			$this->cache['cat_id'] .= ",".$i;
+			$field_data = trim($i,",");
+		} else {
+			$this->cache['cat_id'] .= ",".$field_data;
+		}	
 		$this->cache['cat_id'] = trim($this->cache['cat_id'],",");
 		return trim($field_data);
 	}
@@ -204,25 +250,38 @@ class Sc_category_select extends Fieldframe_Fieldtype {
 				$counter++;
 			} 
 		}
+		
+		$optionSize = 0;
 		foreach ($categories->result as $cat):
 			if ($current_group == 0) $current_group = $cat['group_id'];
 			if ($current_group != $cat['group_id'])
 			{
 				$r .= $DSP->input_select_option('', 
 											'---');
+				$optionSize++;											
 				$current_group = $cat['group_id'];
 			}
-			$r .= $DSP->input_select_option($cat['cat_id'], 
-											$level_label.$cat['cat_name'], 
-											$field_data == $cat['cat_id']);
+			$isSelected = false;
+			$testSel = explode(',',$field_data);
+			if (in_array($cat['cat_id'], $testSel)) {
+				$isSelected = true;			
+			}
+
+			$r .= $DSP->input_select_option($cat['cat_id'],
+			$level_label.$cat['cat_name'], $isSelected);
+			$optionSize++;
+			
 			if ($cat['children'] > 0)
 			{
 				$xLevel = $level+1;
-				$r .= $this->_input_select_options($cat['cat_id'],$xLevel,$group_id,$field_data);
+				$chiopt = $this->_input_select_options($cat['cat_id'],$xLevel,$group_id,$field_data);
+				$optionSize = $optionSize + $chiopt[0];
+				$r .= $chiopt[1];
 			}
 		endforeach;
-		return $r;
+		return array($optionSize, $r);
 	}
+
 
 	/**
 	 * All category groups
@@ -247,10 +306,38 @@ class Sc_category_select extends Fieldframe_Fieldtype {
 			$block .= "<option value=\"{$dl['group_id']}\"$selected>{$dl['group_name']}</option>";
 		endforeach;
 		
-		$block .= "</select></div></div>";
+		$block .= "</select></div>";
 		
 		return $block;
 	}
+
+
+	/**
+	 * Get Category Field Entry Mode options
+	 * 
+	 * @param  int  $current_option
+	 * @return string  A list of options
+	 */
+	function _select_mode($mode)
+	{
+		if (is_array($mode)) {
+			$mode = $mode[0];
+		}	
+		$block = "<div class='itemWrapper'><select name=\"mode[]\" style=\"width:45%\" >";
+		
+		$s= " selected=\"true\"";
+		$block .= "<option value=\"0\"".(($mode==1) ? $s : ''). ">Dropdown - Single Select</option>";
+
+		$block .= "<option value=\"1\"". (($mode==1) ? $s : '').">Dropdown - Multiselect</option>";
+
+		$block .= "<option value=\"2\"". (($mode==2) ? $s : '').">Radio Buttons - Single Select</option>";
+
+		$block .= "<option value=\"3\"". (($mode==3) ? $s : '').">Checkboxes - Multiselect</option>";
+
+		$block .= "</select></div></div>";
+		return $block;
+	}
+
 
 	/**
 	 * Show Heading Tag
