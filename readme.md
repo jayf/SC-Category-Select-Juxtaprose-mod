@@ -1,14 +1,42 @@
-SC Category Select 1.1.3 -- Juxtaprose Mod 0.1
+SC Category Select 1.1.3 -- Juxtaprose Mod 0.2
 ================
 
 Modifcations: Jay Fienberg of [Juxtaprose][7] ([Email][8])
 
-THIS IS NOT READY FOR PRODUCTION!
+This modified version of the SC Category Select 1.1.3 extension is *MAYBE* ready for production, if you are using it only for its data entry features.
 
-I am in the process of adding Multiselect and other features to this add-on (see below for authorship and full details). The Multiselect and other features are options, so that the original, single-select dropdown is still an option (is the default option, in fact).
+NOTE: the custom tags like {my_custom_sc_category_select_field:heading} do NOT yet work with the multiselect features in this version.
+
+See below for a full description of SC Category Select 1.1.3, which is created by Andrew Gunstone.
+
+About the Modifications
+------------
+As with the original, this extension is a FieldFrame populated by Categories, that you can use as a custom fields in an ExpressionEngine 1.6.x publish / edit form. 
+
+These modifications support both single-select and multiple selection of categories (the original allows only single-select), and also allows you to specify what kind of control you want for the category selector. 
+
+The control options are:
+
+* a drop-down select control allowing for a single category to be selected (this is the default, and is basically the same as the unmodified SC Category Select)
+
+* a select control allowing multiple categories to be selected
+
+* radio buttons allowing for a single category to be selected
+
+* checkboxes allowing for multiple categories to be selected
+
+In all cases, the selecting a category via one of these controls stores the category ID(s) in the custom field, AND sets the actual categories on the entry (if the corresponding category group is used by the current entry). If you have multiple catgegory selectors on the page, ALL of the categories selected can become the actual categories on the entry.
+
+Note that this FieldFrame field also works when used with FF Matrix.
+
 
 Modifcation Version
 ------------
+###0.2
+
+* Added Radio Buttons (single select) and Checkboxes (multiselect)
+
+
 ###0.1
 
 * Added Multiselect dropdown display (works for individual fields and in FF Matrix -- cat_id values are saved both in the field and reflected in the actual category-entry mapping table)

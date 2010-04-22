@@ -13,7 +13,7 @@ class Sc_category_select extends Fieldframe_Fieldtype {
  	
 	var $info = array(
 		'name'             => 'SC Category Select',
-		'version'          => '1.1.3-juxtaprose-mod-0.1',
+		'version'          => '1.1.3-juxtaprose-mod-0.2',
 		'desc'             => 'Creates a select menu from a selected EE category (Juxtaprose mod: allows multiselect)',
 		'docs_url'         => 'http://sassafrasconsulting.com.au/software/category-select',
 		'versions_xml_url' => 'http://sassafrasconsulting.com.au/versions.xml'
@@ -69,6 +69,31 @@ class Sc_category_select extends Fieldframe_Fieldtype {
 		$mode = (!isset($field_settings['mode'])) ? 0 : $field_settings['mode'][0];		
 
 		switch ($mode) {
+			case 3: /* Checkboxes - multiselect */
+				//make these setable in the future
+				$show_children = true;
+				$suffix = '';
+				$level_indent =	'';
+				//$level_indent = '&nbsp&nbsp&nbsp&nbsp;&nbsp&nbsp;';
+				$opts = $this->_input_checkboxes(0,0,$group_id,$field_data,$field_name, $show_children, $suffix, $level_indent);
+				
+				$r .= $opts[1];
+				break;
+		
+		
+			case 2: /* Radio Buttons - single select */
+				//make these setable in the future
+				// add a check for required field, and
+				// add an "unselect" option when not required
+				$show_children = true;
+				$suffix = '';
+				$level_indent =	'';
+				//$level_indent = '&nbsp&nbsp&nbsp&nbsp;&nbsp&nbsp;';
+				$opts = $this->_input_radios(0,0,$group_id,$field_data,$field_name, $show_children, $suffix, $level_indent);
+				
+				$r .= $opts[1];
+				break;
+				
 			case 1: /* Dropdown - multiselect */
 				$opts = $this->_input_select_options(0,0,$group_id,$field_data);
 				
@@ -147,8 +172,8 @@ class Sc_category_select extends Fieldframe_Fieldtype {
 		global $DSP, $LANG;
 
 		$options = (!isset($cell_settings['options'])) ? 0 : $cell_settings['options'];
-		
-		$mode = (!isset($field_settings['mode'])) ? 0 : $field_settings['mode'];			
+
+		$mode = (!isset($cell_settings['mode'])) ? 0 : $cell_settings['mode'];			
 		
 		$r = '<label class="itemWrapper">'
 		   . $DSP->qdiv('defaultBold', $LANG->line('select_category_group'))
@@ -222,12 +247,131 @@ class Sc_category_select extends Fieldframe_Fieldtype {
 	}
 	
 	/**
+	 * List all checkboxes
+	 * 
+	 * @param  int  $parent_id
+	 * @param  int  $level
+	 * @param  int  $group_id
+	 * @param  string  $field_data      Currently saved field value
+	 * @param  string  $field_name
+	 * @param  boolean  $show_children	 
+	 * @param  string  $suffix			HTML or text after each radio label	 
+	 * @param  string  $level_indent	HTML or text prefix children items	 
+	 * @return array  [0] count of inputs, [1] checkbox inputs corresponding to categories in category group
+	 */
+	function _input_checkboxes($parent_id,$level,$group_id,$field_data,$field_name, $show_children, $suffix, $level_indent)
+	{
+		global $DSP, $DB;
+				
+		// fetch all categories
+		$categories = $DB->query("SELECT cat_id, cat_name, parent_id, group_id, (SELECT COUNT(cat_id) FROM exp_categories WHERE parent_id = tblCat.cat_id) AS children FROM exp_categories tblCat WHERE parent_id = $parent_id  AND group_id IN ($group_id) ORDER BY group_id, cat_order");
+		$r = '';
+		$level_label = '';
+		$current_group = 0;
+		if ($level > 0)
+		{
+			$counter=0;
+			while($counter < $level)
+			{
+				$level_label .= $level_indent;
+				$counter++;
+			} 
+		}
+
+		$cbCount = 0;
+		foreach ($categories->result as $cat):
+			if ($current_group == 0) $current_group = $cat['group_id'];
+			$selected = '';
+			$testSel = explode(',',$field_data);
+			if (in_array($cat['cat_id'], $testSel)) {
+				$selected = 'checked="checked"';			
+			}
+
+			$r .= '<span style="white-space: nowrap;">' . $level_label. '<input type="checkbox" class="checkbox" value="'. $cat['cat_id'] .'" name="'. $field_name.'[]" id="'. $field_name. '_'. $cat['cat_id'] . '" ' . $selected . ' />';
+			
+			$r .= ' <label for="' . $field_name. '_'. $cat['cat_id'].'">' .$cat['cat_name'] . '</label></span> ' . $suffix;
+			
+			//$DSP->input_radio($field_name.'[]',$cat['cat_id'], $isSelected) . ' ' . $cat['cat_name'] . '<br />';
+			$cbCount++;
+			
+			if ($cat['children'] > 0 && $show_children)
+			{
+				$xLevel = $level+1;
+				$chicb = $this->_input_checkboxes($cat['cat_id'],$xLevel,$group_id,$field_data, $field_name, $show_children, $suffix, $level_indent);
+				$cbCount = $cbCount + $chicb[0];
+				$r .= $chicb[1];
+			}
+		endforeach;
+		return array($optionSize, $r);
+	}		
+	
+	/**
+	 * List all radio inputs
+	 * 
+	 * @param  int  $parent_id
+	 * @param  int  $level
+	 * @param  int  $group_id
+	 * @param  string  $field_data      Currently saved field value
+	 * @param  string  $field_name
+	 * @param  boolean  $show_children	 
+	 * @param  string  $suffix			HTML or text after each radio label	 
+	 * @param  string  $level_indent	HTML or text prefix children items	 
+	 * @return array  [0] count of inputs, [1] radio inputs corresponding to categories in category group
+	 */
+	function _input_radios($parent_id,$level,$group_id,$field_data,$field_name, $show_children, $suffix, $level_indent)
+	{
+		global $DSP, $DB;
+				
+		// fetch all categories
+		$categories = $DB->query("SELECT cat_id, cat_name, parent_id, group_id, (SELECT COUNT(cat_id) FROM exp_categories WHERE parent_id = tblCat.cat_id) AS children FROM exp_categories tblCat WHERE parent_id = $parent_id  AND group_id IN ($group_id) ORDER BY group_id, cat_order");
+		$r = '';
+		$level_label = '';
+		$current_group = 0;
+		if ($level > 0)
+		{
+			$counter=0;
+			while($counter < $level)
+			{
+				$level_label .= $level_indent;
+				$counter++;
+			} 
+		}
+
+		$radioCount = 0;
+		foreach ($categories->result as $cat):
+			if ($current_group == 0) $current_group = $cat['group_id'];
+			$selected = '';
+			$testSel = explode(',',$field_data);
+			if (in_array($cat['cat_id'], $testSel)) {
+				$selected = 'checked="checked"';			
+			}
+
+			$r .= '<span style="white-space: nowrap;">' . $level_label. '<input type="radio" class="radio" value="'. $cat['cat_id'] .'" name="'. $field_name.'[]" id="'. $field_name. '_'. $cat['cat_id'] . '" ' . $selected . ' />';
+			
+			$r .= ' <label for="' . $field_name. '_'. $cat['cat_id'].'">' .$cat['cat_name'] . '</label></span> ' . $suffix;
+			
+			//$DSP->input_radio($field_name.'[]',$cat['cat_id'], $isSelected) . ' ' . $cat['cat_name'] . '<br />';
+			$radioCount++;
+			
+			if ($cat['children'] > 0 && $show_children)
+			{
+				$xLevel = $level+1;
+				$chirad = $this->_input_radios($cat['cat_id'],$xLevel,$group_id,$field_data, $field_name, $show_children, $suffix, $level_indent);
+				$radioCount = $radioCount + $chirad[0];
+				$r .= $chirad[1];
+			}
+		endforeach;
+		return array($optionSize, $r);
+	}	
+	
+	/**
 	 * List all select options
 	 * 
 	 * @param  int  $parent_id
 	 * @param  int  $level
 	 * @param  int  $group_id
-	 * @return string  A list of available categories for the category group
+	 * @param  string  $field_data      Currently saved field value
+	 * @return array  [0] count of options, [1] OPTIONs corresponding to categories in category group
 	 */
 	function _input_select_options($parent_id,$level,$group_id,$field_data)
 	{
@@ -320,6 +464,7 @@ class Sc_category_select extends Fieldframe_Fieldtype {
 		if (is_array($mode)) {
 			$mode = $mode[0];
 		}	
+		
 		$block = "<div class='itemWrapper'><select name=\"mode[]\" style=\"width:45%\" >";
 		
 		$s= " selected=\"true\"";
