@@ -13,10 +13,11 @@ class Sc_category_select extends Fieldframe_Fieldtype {
  	
 	var $info = array(
 		'name'             => 'SC Category Select',
-		'version'          => '1.1.3-juxtaprose-mod-0.2',
+		'version'          => '1.1.3:04',
 		'desc'             => 'Creates a select menu from a selected EE category (Juxtaprose mod: allows multiselect)',
 		'docs_url'         => 'http://sassafrasconsulting.com.au/software/category-select',
-		'versions_xml_url' => 'http://sassafrasconsulting.com.au/versions.xml'
+		'versions_xml_url' => 'http://sassafrasconsulting.com.au/versions.xml',
+		'no_lang'  => TRUE
 	);
 
 	var $hooks = array(
@@ -70,14 +71,20 @@ class Sc_category_select extends Fieldframe_Fieldtype {
 
 		switch ($mode) {
 			case 3: /* Checkboxes - multiselect */
-				//make these setable in the future
+
+				//make all of these setable in the future
 				$show_children = true;
-				$suffix = '';
 				$level_indent =	'';
 				//$level_indent = '&nbsp&nbsp&nbsp&nbsp;&nbsp&nbsp;';
-				$opts = $this->_input_checkboxes(0,0,$group_id,$field_data,$field_name, $show_children, $suffix, $level_indent);
+
+				$all_wrap_attr = ' ' . 'style="overflow: hidden;"';				
+				$span_wrap_attr = ' ' . 'style="float: left; width: 100px; height: 24px; font-size: 12px;"';
+				$input_attr = '';
+				$label_attr = '';
+
+				$opts = $this->_input_checkboxes(0,0,$group_id,$field_data,$field_name, $show_children, $level_indent, $span_wrap_attr, $input_attr, $label_attr);
 				
-				$r .= $opts[1];
+				$r .= '<div' . $all_wrap_attr . '>' . $opts[1] . '</div>';
 				break;
 		
 		
@@ -86,12 +93,17 @@ class Sc_category_select extends Fieldframe_Fieldtype {
 				// add a check for required field, and
 				// add an "unselect" option when not required
 				$show_children = true;
-				$suffix = '';
 				$level_indent =	'';
 				//$level_indent = '&nbsp&nbsp&nbsp&nbsp;&nbsp&nbsp;';
-				$opts = $this->_input_radios(0,0,$group_id,$field_data,$field_name, $show_children, $suffix, $level_indent);
 				
-				$r .= $opts[1];
+				$all_wrap_attr = ' ' . 'style="overflow: hidden;"';				
+				$span_wrap_attr = ' ' . 'style="float: left; width: 250px; height: 24px; font-size: 12px;"';
+				$input_attr = '';
+				$label_attr = '';
+				
+				$opts = $this->_input_radios(0,0,$group_id,$field_data,$field_name, $show_children, $level_indent, $span_wrap_attr, $input_attr, $label_attr);
+				
+				$r .= '<div' . $all_wrap_attr . '>' . $opts[1] . '</div>';
 				break;
 				
 			case 1: /* Dropdown - multiselect */
@@ -255,11 +267,13 @@ class Sc_category_select extends Fieldframe_Fieldtype {
 	 * @param  string  $field_data      Currently saved field value
 	 * @param  string  $field_name
 	 * @param  boolean  $show_children	 
-	 * @param  string  $suffix			HTML or text after each radio label	 
 	 * @param  string  $level_indent	HTML or text prefix children items	 
+	 * @param  string  $span_wrap_attr	HTML attributes for span that wraps around each input / label pair
+	 * @param  string  $input_attr	HTML attributes for input
+	 * @param  string  $label_attr	HTML attributes for label	 
 	 * @return array  [0] count of inputs, [1] checkbox inputs corresponding to categories in category group
 	 */
-	function _input_checkboxes($parent_id,$level,$group_id,$field_data,$field_name, $show_children, $suffix, $level_indent)
+	function _input_checkboxes($parent_id,$level,$group_id,$field_data,$field_name, $show_children, $level_indent, $span_wrap_attr, $input_attr, $label_attr)
 	{
 		global $DSP, $DB;
 				
@@ -284,20 +298,19 @@ class Sc_category_select extends Fieldframe_Fieldtype {
 			$selected = '';
 			$testSel = explode(',',$field_data);
 			if (in_array($cat['cat_id'], $testSel)) {
-				$selected = 'checked="checked"';			
+				$selected = ' checked="checked"';			
 			}
 
-			$r .= '<span style="white-space: nowrap;">' . $level_label. '<input type="checkbox" class="checkbox" value="'. $cat['cat_id'] .'" name="'. $field_name.'[]" id="'. $field_name. '_'. $cat['cat_id'] . '" ' . $selected . ' />';
+			$r .= '<span' . $span_wrap_attr . '>' . $level_label. '<input type="checkbox" class="checkbox" value="'. $cat['cat_id'] .'" name="'. $field_name.'[]" id="'. $field_name. '_'. $cat['cat_id'] . '"' . $selected . $input_attr . ' />';
 			
-			$r .= ' <label for="' . $field_name. '_'. $cat['cat_id'].'">' .$cat['cat_name'] . '</label></span> ' . $suffix;
+			$r .= ' <label for="' . $field_name. '_'. $cat['cat_id']. '"' . $label_attr . '>' .$cat['cat_name'] . '</label></span>';
 			
-			//$DSP->input_radio($field_name.'[]',$cat['cat_id'], $isSelected) . ' ' . $cat['cat_name'] . '<br />';
 			$cbCount++;
 			
 			if ($cat['children'] > 0 && $show_children)
 			{
 				$xLevel = $level+1;
-				$chicb = $this->_input_checkboxes($cat['cat_id'],$xLevel,$group_id,$field_data, $field_name, $show_children, $suffix, $level_indent);
+				$chicb = $this->_input_checkboxes($cat['cat_id'],$xLevel,$group_id,$field_data, $field_name, $show_children, $level_indent, $span_wrap_attr, $input_attr, $label_attr);
 				$cbCount = $cbCount + $chicb[0];
 				$r .= $chicb[1];
 			}
@@ -314,11 +327,13 @@ class Sc_category_select extends Fieldframe_Fieldtype {
 	 * @param  string  $field_data      Currently saved field value
 	 * @param  string  $field_name
 	 * @param  boolean  $show_children	 
-	 * @param  string  $suffix			HTML or text after each radio label	 
 	 * @param  string  $level_indent	HTML or text prefix children items	 
+	 * @param  string  $span_wrap_attr	HTML attributes for span that wraps around each input / label pair
+	 * @param  string  $input_attr	HTML attributes for input
+	 * @param  string  $label_attr	HTML attributes for label	 	 
 	 * @return array  [0] count of inputs, [1] radio inputs corresponding to categories in category group
 	 */
-	function _input_radios($parent_id,$level,$group_id,$field_data,$field_name, $show_children, $suffix, $level_indent)
+	function _input_radios($parent_id,$level,$group_id,$field_data,$field_name, $show_children, $level_indent, $span_wrap_attr, $input_attr, $label_attr)
 	{
 		global $DSP, $DB;
 				
@@ -343,20 +358,19 @@ class Sc_category_select extends Fieldframe_Fieldtype {
 			$selected = '';
 			$testSel = explode(',',$field_data);
 			if (in_array($cat['cat_id'], $testSel)) {
-				$selected = 'checked="checked"';			
+				$selected = ' checked="checked"';			
 			}
 
-			$r .= '<span style="white-space: nowrap;">' . $level_label. '<input type="radio" class="radio" value="'. $cat['cat_id'] .'" name="'. $field_name.'[]" id="'. $field_name. '_'. $cat['cat_id'] . '" ' . $selected . ' />';
+			$r .= '<span' . $span_wrap_attr . '>' . $level_label. '<input type="radio" class="radio" value="'. $cat['cat_id'] .'" name="'. $field_name.'[]" id="'. $field_name. '_'. $cat['cat_id'] . '"' . $selected . $input_attr . ' />';
 			
-			$r .= ' <label for="' . $field_name. '_'. $cat['cat_id'].'">' .$cat['cat_name'] . '</label></span> ' . $suffix;
+			$r .= ' <label for="' . $field_name. '_'. $cat['cat_id'] . '"' . $label_attr . '>' .$cat['cat_name'] . '</label></span>';
 			
-			//$DSP->input_radio($field_name.'[]',$cat['cat_id'], $isSelected) . ' ' . $cat['cat_name'] . '<br />';
 			$radioCount++;
 			
 			if ($cat['children'] > 0 && $show_children)
 			{
 				$xLevel = $level+1;
-				$chirad = $this->_input_radios($cat['cat_id'],$xLevel,$group_id,$field_data, $field_name, $show_children, $suffix, $level_indent);
+				$chirad = $this->_input_radios($cat['cat_id'],$xLevel,$group_id,$field_data, $field_name, $show_children, $level_indent, $span_wrap_attr, $input_attr, $label_attr);
 				$radioCount = $radioCount + $chirad[0];
 				$r .= $chirad[1];
 			}
