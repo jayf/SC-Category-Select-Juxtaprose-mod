@@ -13,11 +13,11 @@ class Sc_category_select extends Fieldframe_Fieldtype {
  	
 	var $info = array(
 		'name'             => 'SC Category Select',
-		'version'          => '1.1.3:04',
+		'version'          => '1.1.3:05',
 		'desc'             => 'Creates a select menu from a selected EE category (Juxtaprose mod: allows multiselect)',
 		'docs_url'         => 'http://sassafrasconsulting.com.au/software/category-select',
 		'versions_xml_url' => 'http://sassafrasconsulting.com.au/versions.xml',
-		'no_lang'  => TRUE
+		'no_lang'  => FALSE
 	);
 
 	var $hooks = array(
@@ -49,7 +49,43 @@ class Sc_category_select extends Fieldframe_Fieldtype {
 			foreach ($cat_ids AS $id):
 				$sql .= "($id, $entry_id),";
 			endforeach;
-			$DB->query("INSERT INTO exp_category_posts (cat_id, entry_id) VALUES ".trim($sql,','));				
+			$DB->query("INSERT INTO exp_category_posts (cat_id, entry_id) VALUES ".trim($sql,','));	
+//print_r($this->cache['get_parent_ids']);
+			if ($this->cache['get_parent_ids'] != '') {
+				$gpids = explode(',', trim($this->cache['get_parent_ids'],','));
+				$gpids = array_unique($gpids);				$this->_insert_parent_categories($gpids,$entry_id);
+			}			
+//			$DB->query("SELECT asdhjasdh f");			
+		}
+	}
+	
+	/**
+	 * Insert Parent Categories
+	 *
+	 * @param  array  $cat_ids      (child) category ids
+	 * @param  string   $entry_id   The entry id
+	 */		
+	function _insert_parent_categories($cat_ids, $entry_id) 
+	{
+		global $DB;	
+		$sql = '';	
+		foreach ($cat_ids AS $id):
+			$sql .= $id . ",";
+		endforeach;
+
+		$parents = $DB->query("SELECT DISTINCT parent_id FROM exp_categories WHERE cat_id IN (" . trim($sql,',')  .") and parent_id !=0 AND parent_id NOT IN (". trim($sql,',')  .")");
+
+		$newsql = '';
+
+		foreach ($parents->result as $parent):
+			$newsql .= "(".$parent['parent_id'].", $entry_id),";
+			$cat_ids[] = $parent['parent_id'];
+		endforeach;
+//print_r($cat_ids);
+//echo "<br />";
+		if ($newsql != '') {
+			$DB->query("INSERT INTO exp_category_posts (cat_id, entry_id) VALUES ".trim($newsql,','));	
+			$this->_insert_parent_categories($cat_ids,$entry_id);
 		}
 	}
  
@@ -78,13 +114,13 @@ class Sc_category_select extends Fieldframe_Fieldtype {
 				//$level_indent = '&nbsp&nbsp&nbsp&nbsp;&nbsp&nbsp;';
 
 				$all_wrap_attr = ' ' . 'style="overflow: hidden;"';				
-				$span_wrap_attr = ' ' . 'style="float: left; width: 100px; height: 24px; font-size: 12px;"';
+				$span_wrap_attr = ' ' . 'style="float: left; width: 220px; height: 24px; font-size: 12px;"';
 				$input_attr = '';
 				$label_attr = '';
 
 				$opts = $this->_input_checkboxes(0,0,$group_id,$field_data,$field_name, $show_children, $level_indent, $span_wrap_attr, $input_attr, $label_attr);
 				
-				$r .= '<div' . $all_wrap_attr . '>' . $opts[1] . '</div>';
+				$r = '<div' . $all_wrap_attr . '>' . $opts[1] . '</div>';
 				break;
 		
 		
@@ -97,13 +133,13 @@ class Sc_category_select extends Fieldframe_Fieldtype {
 				//$level_indent = '&nbsp&nbsp&nbsp&nbsp;&nbsp&nbsp;';
 				
 				$all_wrap_attr = ' ' . 'style="overflow: hidden;"';				
-				$span_wrap_attr = ' ' . 'style="float: left; width: 250px; height: 24px; font-size: 12px;"';
+				$span_wrap_attr = ' ' . 'style="float: left; width: 100px; height: 24px; font-size: 12px;"';
 				$input_attr = '';
 				$label_attr = '';
 				
 				$opts = $this->_input_radios(0,0,$group_id,$field_data,$field_name, $show_children, $level_indent, $span_wrap_attr, $input_attr, $label_attr);
 				
-				$r .= '<div' . $all_wrap_attr . '>' . $opts[1] . '</div>';
+				$r = '<div' . $all_wrap_attr . '>' . $opts[1] . '</div>';
 				break;
 				
 			case 1: /* Dropdown - multiselect */
@@ -163,10 +199,15 @@ class Sc_category_select extends Fieldframe_Fieldtype {
 
 		$mode = (!isset($field_settings['mode'])) ? 0 : $field_settings['mode'];	
 
+		$assign_parents = (!isset($field_settings['assign_parents'])) ? 0 : $field_settings['assign_parents'];	
+
+
 		$cell = $DSP->qdiv('defaultBold', $LANG->line('select_category_group'))
 		    . $this->_select_category($options)
 			. $DSP->qdiv('defaultBold', $LANG->line('display_mode'))
-		    . $this->_select_mode($mode);
+		    . $this->_select_mode($mode)
+			. $DSP->qdiv('defaultBold', $LANG->line('assign_parents'))
+		    . $this->_select_parent_setting($assign_parents);
 
 		$cell = $DSP->qdiv('rel_block', $cell);
 
@@ -185,13 +226,17 @@ class Sc_category_select extends Fieldframe_Fieldtype {
 
 		$options = (!isset($cell_settings['options'])) ? 0 : $cell_settings['options'];
 
-		$mode = (!isset($cell_settings['mode'])) ? 0 : $cell_settings['mode'];			
+		$mode = (!isset($cell_settings['mode'])) ? 0 : $cell_settings['mode'];	
 		
+		$assign_parents = (!isset($field_settings['assign_parents'])) ? 0 : $field_settings['assign_parents'];	
+				
 		$r = '<label class="itemWrapper">'
 		   . $DSP->qdiv('defaultBold', $LANG->line('select_category_group'))
 		    . $this->_select_category($options)
 			. $DSP->qdiv('defaultBold', $LANG->line('display_mode'))
 		    . $this->_select_mode($mode)
+			. $DSP->qdiv('defaultBold', $LANG->line('assign_parents'))
+		    . $this->_select_parent_setting($assign_parents)		    
    		   . '</label>';
 
 		return $r;
@@ -219,6 +264,11 @@ class Sc_category_select extends Fieldframe_Fieldtype {
 			$this->cache['cat_id'] .= ",".$field_data;
 		}	
 		$this->cache['cat_id'] = trim($this->cache['cat_id'],",");
+		if ($field_settings['assign_parents']==1) {
+			$this->cache['get_parent_ids'] .= trim($this->cache['cat_id'],",");		
+		}
+
+//		echo "yo " . $field_settings['assign_parents'] . " : " . $this->cache['get_parent_ids'] . "<br />";
 		return trim($field_data);
 	}
 
@@ -315,7 +365,7 @@ class Sc_category_select extends Fieldframe_Fieldtype {
 				$r .= $chicb[1];
 			}
 		endforeach;
-		return array($optionSize, $r);
+		return array($cbCount, $r);
 	}		
 	
 	/**
@@ -375,7 +425,7 @@ class Sc_category_select extends Fieldframe_Fieldtype {
 				$r .= $chirad[1];
 			}
 		endforeach;
-		return array($optionSize, $r);
+		return array($radioCount, $r);
 	}	
 	
 	/**
@@ -479,16 +529,36 @@ class Sc_category_select extends Fieldframe_Fieldtype {
 			$mode = $mode[0];
 		}	
 		
-		$block = "<div class='itemWrapper'><select name=\"mode[]\" style=\"width:45%\" >";
+		$block = "<div class='itemWrapper'><select name=\"mode\" style=\"width:45%\" >";
 		
 		$s= " selected=\"true\"";
-		$block .= "<option value=\"0\"".(($mode==1) ? $s : ''). ">Dropdown - Single Select</option>";
+		$block .= "<option value=\"0\"".(($mode==0) ? $s : ''). ">Dropdown - Single Select</option>";
 
 		$block .= "<option value=\"1\"". (($mode==1) ? $s : '').">Dropdown - Multiselect</option>";
 
 		$block .= "<option value=\"2\"". (($mode==2) ? $s : '').">Radio Buttons - Single Select</option>";
 
 		$block .= "<option value=\"3\"". (($mode==3) ? $s : '').">Checkboxes - Multiselect</option>";
+
+		$block .= "</select></div></div>";
+		return $block;
+	}
+
+	/**
+	 * Get Assign Parent setting options
+	 * 
+	 * @param  int  $current_option
+	 * @return string  A list of options
+	 */
+	function _select_parent_setting($assign_parents)
+	{
+
+		$block = "<div class='itemWrapper'><select name=\"assign_parents\" style=\"width:45%\" >";
+		
+		$s= " selected=\"true\"";
+		$block .= "<option value=\"0\"".(($assign_parents==0) ? $s : ''). ">No</option>";
+
+		$block .= "<option value=\"1\"". (($assign_parents==1) ? $s : '').">Yes</option>";
 
 		$block .= "</select></div></div>";
 		return $block;
