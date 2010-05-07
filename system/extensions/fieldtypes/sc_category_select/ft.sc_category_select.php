@@ -2,18 +2,35 @@
 if ( ! defined('EXT')) exit('Invalid file request');
 
 /**
- * Category Select Class
+ * Category Select, by Juxtaprose
+ * @package   Category Select
+ * @author    Jay Fienberg <info@juxtaprose.com>
+ * @copyright 2010 Juxtaprose Inc
+ * @license   http://creativecommons.org/licenses/by-sa/3.0/ Attribution-Share Alike 3.0 Unported
+ */
+
+/**
+ * Based on Category Select Class
+ *
  * @package   Category Select
  * @author    Andrew Gunstone <andrew@thirststudios.com>
  * @copyright 2010 Andrew Gunstone
  * @license   http://creativecommons.org/licenses/by-sa/3.0/ Attribution-Share Alike 3.0 Unported
  */
  
+ /**
+ * Code for Fancy Lists taken from FF Multi-select UI Class
+ *
+ * @author    Max Lazar <max@wiseupstudio.com>
+ * @copyright Copyright (c) 2009-2010 Max Lazar
+ * @license   http://creativecommons.org/licenses/by-sa/3.0/ Attribution-Share Alike 3.0 Unported
+ */
+ 
 class Sc_category_select extends Fieldframe_Fieldtype {
- 	
+	
 	var $info = array(
 		'name'             => 'SC Category Select',
-		'version'          => '1.1.3:05',
+		'version'          => '1.1.3:06',
 		'desc'             => 'Creates a select menu from a selected EE category (Juxtaprose mod: allows multiselect)',
 		'docs_url'         => 'http://sassafrasconsulting.com.au/software/category-select',
 		'versions_xml_url' => 'http://sassafrasconsulting.com.au/versions.xml',
@@ -51,6 +68,9 @@ class Sc_category_select extends Fieldframe_Fieldtype {
 			endforeach;
 			$DB->query("INSERT INTO exp_category_posts (cat_id, entry_id) VALUES ".trim($sql,','));	
 //print_r($this->cache['get_parent_ids']);
+			if (!isset($this->cache['get_parent_ids'])) {
+				$this->cache['get_parent_ids'] = '';
+			}			
 			if ($this->cache['get_parent_ids'] != '') {
 				$gpids = explode(',', trim($this->cache['get_parent_ids'],','));
 				$gpids = array_unique($gpids);				$this->_insert_parent_categories($gpids,$entry_id);
@@ -99,7 +119,7 @@ class Sc_category_select extends Fieldframe_Fieldtype {
 	 */
 	function display_field($field_name, $field_data, $field_settings)
 	{
-	 	global $DSP, $DB;
+	 	global $DSP, $DB, $PREFS;
 			
 		$group_id = (!isset($field_settings['options'])) ? 0 : $field_settings['options'];
 		
@@ -143,6 +163,8 @@ class Sc_category_select extends Fieldframe_Fieldtype {
 				break;
 				
 			case 1: /* Dropdown - multiselect */
+			case 4: /* Fancy List multiselect */
+			case 5: /* Fancy Two-Side multiselect */			
 				$opts = $this->_input_select_options(0,0,$group_id,$field_data);
 				
 				$size = $opts[0]+1;	
@@ -151,12 +173,42 @@ class Sc_category_select extends Fieldframe_Fieldtype {
 					$size = 6;
 				}
 				
-				$r = $DSP->input_select_header($field_name.'[]',1,$size);
-				$r .= $DSP->input_select_option('', '--');
-	
-				$r .= $opts[1];
+//				$r = $DSP->input_select_header($field_name.'[]',1,$size);
+				$r = '<select name="'.$field_name.'[]" multiple="multiple" size="'. $size .'"';
+				if ($mode == 1) { /* Dropdown - multiselect */
+					$r .= ' class="sc_category_select_mode_1">';
+					$r .= $DSP->input_select_option('', '--');
+				} else if ($mode== 4) {
+					$r .= ' class="sc_category_select_mode_4">';
+				} else if ($mode== 5) {
+					$r .= ' class="sc_category_select_mode_5">';
+				}
 				
-				$r .= $DSP->input_select_footer();
+				$r .= $opts[1];
+				$r .= "</select>";
+//				$r .= $DSP->input_select_footer();
+				
+				if ($mode == 4) { /* Fancy List multiselect */
+
+					$this->insert('body', '<script type="text/javascript" src="'.$PREFS->ini('theme_folder_url', 1) . 'cp_themes/wiseup/js/jquery.asmselect.js" charset="utf-8"></script>');
+					$this->insert('head', '<link rel="stylesheet" type="text/css" href="'.$PREFS->ini('theme_folder_url', 1) . 'cp_themes/wiseup/css/jquery.asmselect.css" charset="utf-8" />');			
+			
+					$js = "jQuery().ready(function() {
+							jQuery('[name=\"".$field_name."[]\"]').asmSelect({
+							animate: true,
+							addItemTarget: 'top'}
+							);
+						});";
+					$this->insert_js($js); 				
+				} else if ($mode == 5) {  /* Fancy Two-Side multiselect */			
+					$this->insert('body', '<script type="text/javascript" src="'.$PREFS->ini('theme_folder_url', 1) . 'cp_themes/wiseup/js/jquery.multiselect2side.js" charset="utf-8"></script>');
+					$this->insert('head', '<link rel="stylesheet" type="text/css" href="'.$PREFS->ini('theme_folder_url', 1) . 'cp_themes/wiseup/css/jquery.multiselect2side.css" charset="utf-8" />');			
+					$js = "jQuery().ready(function() {
+							jQuery('[name=\"".$field_name."[]\"]').multiselect2side();
+						});";		
+					$this->insert_js($js); 						
+				}
+				
 				break;
 			case 0: /* Dropdown - single select */
 			default:
@@ -182,6 +234,24 @@ class Sc_category_select extends Fieldframe_Fieldtype {
 	 */
 	function display_cell($cell_name, $cell_data, $cell_settings)
 	{
+		$js = "jQuery.fn.ffMatrix.onDisplayCell.sc_category_select = function(cell, FFM) {
+			fieldPageTest = jQuery('form[name=field_form]');
+			if (fieldPageTest.size()==0) {				jQuery.each(jQuery('.sc_category_select_mode_4',cell), function() {
+					if (jQuery(this).css('display') != 'none') {
+						jQuery(this).asmSelect({
+							animate: true,
+							addItemTarget: 'top'});
+					}		
+				});
+				jQuery.each(jQuery('.sc_category_select_mode_5',cell), function() {		
+					if (jQuery(this).css('display') != 'none') {				
+						jQuery(this).multiselect2side();
+					}	
+				});	
+			}	
+		};";	
+		$this->insert_js($js); 				
+
 		return $this->display_field($cell_name, $cell_data, $cell_settings);
 	}
 	
@@ -254,6 +324,13 @@ class Sc_category_select extends Fieldframe_Fieldtype {
 	{
 		
 		$this->cache['cat_del'] = 'true';
+		$i = '';		
+		if (!isset($this->cache['cat_id'])) {
+			$this->cache['cat_id'] = '';
+		}
+		if (!isset($this->cache['get_parent_ids'])) {
+			$this->cache['get_parent_ids'] = '';
+		}		
 		if (is_array($field_data)) {
 			foreach ($field_data AS $id):
 				$i .=   $id . ",";
@@ -539,6 +616,10 @@ class Sc_category_select extends Fieldframe_Fieldtype {
 		$block .= "<option value=\"2\"". (($mode==2) ? $s : '').">Radio Buttons - Single Select</option>";
 
 		$block .= "<option value=\"3\"". (($mode==3) ? $s : '').">Checkboxes - Multiselect</option>";
+
+		$block .= "<option value=\"4\"". (($mode==4) ? $s : '').">Fancy List Multiselect</option>";
+
+		$block .= "<option value=\"5\"". (($mode==5) ? $s : '').">Fancy Two-Side Multiselect</option>";
 
 		$block .= "</select></div></div>";
 		return $block;
