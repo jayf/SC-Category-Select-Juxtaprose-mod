@@ -1,17 +1,19 @@
-SC Category Select 1.1.3 -- Juxtaprose Mod 0.2
+SC Category Select 1.1.3 -- Juxtaprose Mod 0.6
 ================
 
 Modifcations: Jay Fienberg of [Juxtaprose][7] ([Email][8])
 
-This modified version of the SC Category Select 1.1.3 extension is *MAYBE* ready for production, if you are using it only for its data entry features.
+This modified version of the SC Category Select 1.1.3 extension is basically ready for production, if you are using it only for its data entry features. There are some form layout things hard coded in there that I need to make configurable -- you'll probably want to wait until I do that. But, it's all working well for me on a site that's about to go live.
 
 NOTE: the custom tags like {my_custom_sc_category_select_field:heading} do NOT yet work with the multiselect features in this version.
 
 See below for a full description of SC Category Select 1.1.3, which is created by Andrew Gunstone.
 
+(This all may get renamed, as it's becoming more than just a tweak to the original -- TBD.)
+
 About the Modifications
 ------------
-As with the original, this extension is a FieldFrame populated by Categories, that you can use as a custom fields in an ExpressionEngine 1.6.x publish / edit form. 
+As with the original, this extension is a FieldFrame populated by ExpressionEngnie Categories, that you can use as a custom fields in an ExpressionEngine 1.6.x publish / edit form. 
 
 These modifications support both single-select and multiple selection of categories (the original allows only single-select), and also allows you to specify what kind of control you want for the category selector. 
 
@@ -25,13 +27,29 @@ The control options are:
 
 * checkboxes allowing for multiple categories to be selected
 
+* a "Fancy List, Line Mode" format, that is based on the line mode of Max Lazar's FF Multiselect UI fieldframe (http://wiseupstudio.com/expressionengine/mx-multiselect-ui.html) 
+
+* a "Fancy List, Two Side" format, that is based on the two side mode of Max Lazar's FF Multiselect UI fieldframe (http://wiseupstudio.com/expressionengine/mx-multiselect-ui.html) [NOTE: there's currently an issue with this in mod version 0.6, so please don't use it in production yet!] 
+
 In all cases, the selecting a category via one of these controls stores the category ID(s) in the custom field, AND sets the actual categories on the entry (if the corresponding category group is used by the current entry). If you have multiple catgegory selectors on the page, ALL of the categories selected can become the actual categories on the entry.
+
+There is also an option, per field, to automatically add to the entry, the parent categories of the selected category. So, only the category / categories chosen in the custom field are stored in the custom field, but then entry itself can be categorized with not only those categories, but (automatically) their parents as well.
 
 Note that this FieldFrame field also works when used with FF Matrix.
 
 
 Modifcation Version
 ------------
+###0.6
+* Two new list modes based on Max Lazar's FF Multiselect UI
+
+* An option, per field, to auto set parent categories
+
+* A tweak to Brandon Kelly's script for FF Matrix (v. 1.3.5) that supports the proper use of HTML LABELs in the publish / edit form (e.g., for checkboxes -- note: that this breaks away from the EE convention of not using HTML labels -- Brandon Kelly's script was 100% fine in EE terms, but I wanted to make the HTML more accessible).
+
+###0.3 - 0.5
+* Lot of tweaks and refinements -- see 0.6 for notable stuff
+
 ###0.2
 
 * Added Radio Buttons (single select) and Checkboxes (multiselect)
