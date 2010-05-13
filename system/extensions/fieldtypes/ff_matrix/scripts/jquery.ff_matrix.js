@@ -120,8 +120,8 @@ function resetRows(obj) {
 			$td = $(this);
 			if (rowIndex % 2) $td.removeClass('tableCellOne').addClass('tableCellTwo');
 			else $td.removeClass('tableCellTwo').addClass('tableCellOne');
-			$td.find('*[name],label').each(function() {
 /* JUXTA */		
+			$td.find('*[name^=field_id_],label').each(function() {
 				if (this.name) {
 					this.name = obj.fieldName+'['+rowIndex+']' + this.name.substring(this.name.indexOf(']')+1);
 				}
